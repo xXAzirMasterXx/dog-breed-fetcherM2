@@ -14,15 +14,38 @@ import java.util.*;
  */
 public class CachingBreedFetcher implements BreedFetcher {
     // TODO Task 2: Complete this class
-    private int callsMade = 0;
-    public CachingBreedFetcher(BreedFetcher fetcher) {
 
+    private int callsMade = 0;
+    // to store pre-existing maps
+    private Map<String, List<String>> cache = new HashMap<>();
+    private BreedFetcher fetcher; // here im keeping the class as BreedFetcher, to enusre that the user can construct chachingbreedfetcher using either 2 variants (local or api) such that we query the one the user wants to
+    // constructor
+    public CachingBreedFetcher(BreedFetcher fetcher) {
+        this.fetcher = fetcher;
     }
 
     @Override
-    public List<String> getSubBreeds(String breed) {
-        // return statement included so that the starter code can compile and run.
-        return new ArrayList<>();
+    public List<String> getSubBreeds(String breed) throws BreedNotFoundException {
+        String key = breed.toLowerCase();
+
+        // If already in cache, no need to query the api, just take locally
+        if (cache.containsKey(key)) {
+            // Return a shallow copy so callers can’t mutate cached list
+            return new ArrayList<>(cache.get(key));
+        }
+
+        // Not cached --> need to query the fetcher
+        callsMade++; // call made
+        try {
+            List<String> result = fetcher.getSubBreeds(breed);
+            // Cache an immutable copy (so our internal cache can’t be mutated)
+            cache.put(key, List.copyOf(result));
+            // Return a fresh copy to the caller
+            return new ArrayList<>(result);
+        } catch (BreedNotFoundException e) {
+            // Per requirements: do NOT cache failures
+            throw e;
+        }
     }
 
     public int getCallsMade() {
